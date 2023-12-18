@@ -13,9 +13,13 @@ Dự án được thực hiện trên mạch vi điều khiển Raspberry Pi 3 M
 - Các thư viện Python cần thiết (cài đặt bằng pip install -r requirements.txt):
 
 RPi.GPIO 
+
 adafruit-blinka 
+
 adafruit-circuitpython-charlcd 
+
 pyttsx3 
+
 SpeechRecognition
 
 ## SETUP
