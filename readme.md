@@ -18,15 +18,13 @@ SpeechRecognition
 
 ## Thiết lập
 Kết nối cảm biến cảm ứng vào các chân GPIO được chỉ định trên Raspberry Pi.
-
 Kết nối màn hình LCD 16x2 I2C vào Raspberry Pi.
-
 Kết nối microphone USB hoặc thiết bị đầu vào âm thanh vào Raspberry Pi.
-
 Sao chép kho dữ liệu về Raspberry Pi của bạn:
 
+
 ```bash
- git clone https://github.com/serenaphuong/glovekeyboard
+    git clone https://github.com/serenaphuong/glovekeyboard.git
     ```
 
 Cài đặt các thư viện Python cần thiết:
@@ -40,6 +38,7 @@ Chạy các tập lệnh chính một cách tuần tự, đảm bảo bạn đan
 ```bash
     python run.py
     ```
+
 ## Sử dụng
 
 Chạm vào các cảm biến để nhập ký tự. Mỗi cảm biến được gán một cặp chữ cái.
