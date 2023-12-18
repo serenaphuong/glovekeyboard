@@ -1,68 +1,57 @@
-# Touch-and-Speak Raspberry Pi Project
-# https://pimylifeup.com/raspberry-pi-anydesk/
-## Overview
+## Tổng quan
+Dự án này thể hiện một hệ thống dựa trên Raspberry Pi cho phép người dùng nhập văn bản bằng cảm biến cảm ứng, chuyển đổi văn bản thành giọng nói và nhận diện giọng nói để hiển thị nó trên một màn hình LCD.
 
-This project demonstrates a Raspberry Pi-based system that allows users to input text using touch sensors, convert the text to speech, and recognize speech to display it on an LCD screen.
+## Yêu cầu phần cứng
+Raspberry Pi (đã kiểm tra trên Raspberry Pi 3 Model B+)
+Cảm biến cảm ứng (ví dụ: cảm biến cảm ứng điện dung)
+Màn hình LCD 16x2 I2C
+Microphone USB hoặc thiết bị đầu vào âm thanh tương thích khác
+Yêu cầu phần mềm
+Hệ điều hành Raspbian (hoặc bất kỳ hệ điều hành Raspberry Pi tương thích nào khác)
+Python 3.x
+Các thư viện Python cần thiết (cài đặt bằng pip install -r requirements.txt):
+RPi.GPIO
+adafruit-blinka
+adafruit-circuitpython-charlcd
+pyttsx3
+SpeechRecognition
+## Thiết lập
+Kết nối cảm biến cảm ứng vào các chân GPIO được chỉ định trên Raspberry Pi.
 
-## Hardware Requirements
+Kết nối màn hình LCD 16x2 I2C vào Raspberry Pi.
 
-- Raspberry Pi (tested on Raspberry Pi 3 Model B+)
-- Touch sensors (e.g., capacitive touch sensors)
-- 16x2 I2C LCD screen
-- USB microphone or other compatible audio input device
+Kết nối microphone USB hoặc thiết bị đầu vào âm thanh vào Raspberry Pi.
 
-## Software Requirements
+Sao chép kho dữ liệu về Raspberry Pi của bạn:
 
-- Raspbian OS (or any other compatible Raspberry Pi operating system)
-- Python 3.x
-- Required Python libraries (install using `pip install -r requirements.txt`):
-  - RPi.GPIO
-  - adafruit-blinka
-  - adafruit-circuitpython-charlcd
-  - pyttsx3
-  - SpeechRecognition
+bash
+Copy code
+git clone https://github.com/serenaphuong/glovekeyboard
+Cài đặt các thư viện Python cần thiết:
 
-## Setup
+bash
+Copy code
+pip install -r requirements.txt
+Chạy các tập lệnh chính một cách tuần tự, đảm bảo bạn đang ở trong thư mục của tệp bạn đã sao chép:
 
-1. Connect the touch sensors to the designated GPIO pins on the Raspberry Pi.
-2. Connect the 16x2 I2C LCD screen to the Raspberry Pi.
-3. Connect a USB microphone or audio input device to the Raspberry Pi.
-4. Clone the repository to your Raspberry Pi:
+bash
+Copy code
+python run.py
 
-    ```bash
-    git clone https://github.com/smart-life-tech/serena.git
-    ```
+## Sử dụng
+Chạm vào các cảm biến để nhập ký tự. Mỗi cảm biến được gán một cặp chữ cái.
+Một lần chạm kép khoảng trắng hoặc một khoảng thời gian chờ sẽ đánh dấu kết thúc một câu.
+Màn hình LCD hiển thị các ký tự tích lũy như một câu.
+Hệ thống chuyển đổi câu thành giọng nói và phát nó qua thiết bị âm thanh được kết nối.
+## Tùy chỉnh
+Điều chỉnh cấu hình chân GPIO trong main.py nếu cảm biến cảm ứng của bạn được kết nối vào các chân khác.
+Sửa đổi các cặp chữ cái trong main.py dựa trên ánh xạ cảm biến của bạn.
+Điều chỉnh thời gian chờ và các thiết lập khác trong main.py để phù hợp với sở thích của bạn.
+## Giấy phép
+Dự án này được cấp phép theo Giấy phép MIT.
 
-5. Install the required Python libraries:
 
-    ```bash
-    pip install -r requirements.txt
-    ```
 
-6. Run the main scripts one at a time, make sure you are in the diectory of the file you cloned:
 
-    ```bash
-    python lcdOnly.py
-    python tts-stt.py
-    python withoutSpeech.py
-    python keypadTest.py
-    python withspeech/speech.py
-    ```
 
-## Usage
-
-1. Touch the sensors to input characters. Each sensor is assigned a pair of alphabets.
-2. A double touch space or a timeout period signifies the end of a sentence.
-3. The LCD screen displays the accumulated characters as a sentence.
-4. The system converts the sentence to speech and plays it using the connected audio device.
-
-## Customization
-##note main.py could be any of the file from the repo above
-- Adjust GPIO pin configurations in `main.py` if your touch sensors are connected to different pins.
-- Modify the alphabet pairs in `main.py` based on your sensor mapping.
-- Tweak the timeout duration and other settings in `main.py` to suit your preferences.
-
-## License
-
-This project is licensed under the [MIT License](LICENSE).
 
