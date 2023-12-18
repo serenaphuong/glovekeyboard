@@ -1,0 +1,5 @@
+RPi.GPIO
+adafruit-blinka
+adafruit-circuitpython-charlcd
+pyttsx3
+SpeechRecognition
