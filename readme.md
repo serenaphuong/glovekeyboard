@@ -15,6 +15,7 @@ adafruit-blinka
 adafruit-circuitpython-charlcd
 pyttsx3
 SpeechRecognition
+
 ## Thiết lập
 Kết nối cảm biến cảm ứng vào các chân GPIO được chỉ định trên Raspberry Pi.
 
@@ -34,26 +35,29 @@ Cài đặt các thư viện Python cần thiết:
    pip install -r requirements.txt
     ```
 
-
-
 Chạy các tập lệnh chính một cách tuần tự, đảm bảo bạn đang ở trong thư mục của tệp bạn đã sao chép:
 
 ```bash
     python run.py
     ```
-
-
 ## Sử dụng
+
 Chạm vào các cảm biến để nhập ký tự. Mỗi cảm biến được gán một cặp chữ cái.
 Một lần chạm kép khoảng trắng hoặc một khoảng thời gian chờ sẽ đánh dấu kết thúc một câu.
 Màn hình LCD hiển thị các ký tự tích lũy như một câu.
 Hệ thống chuyển đổi câu thành giọng nói và phát nó qua thiết bị âm thanh được kết nối.
 ## Tùy chỉnh
+
 Điều chỉnh cấu hình chân GPIO trong main.py nếu cảm biến cảm ứng của bạn được kết nối vào các chân khác.
 Sửa đổi các cặp chữ cái trong main.py dựa trên ánh xạ cảm biến của bạn.
 Điều chỉnh thời gian chờ và các thiết lập khác trong main.py để phù hợp với sở thích của bạn.
 ## Giấy phép
+
 Dự án này được cấp phép theo Giấy phép MIT.
+
+
+
+
 
 
 
