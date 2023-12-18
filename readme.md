@@ -24,7 +24,7 @@ Sao chép kho dữ liệu về Raspberry Pi của bạn:
 
 
 
-       ```bash
+       ```
         git clone https://github.com/serenaphuong/glovekeyboard.git
     ```
 
@@ -32,7 +32,7 @@ Sao chép kho dữ liệu về Raspberry Pi của bạn:
 Cài đặt các thư viện Python cần thiết:
 
 
-        ```bash
+        ```
         pip install -r requirements.txt
     ```
 
@@ -40,7 +40,7 @@ Cài đặt các thư viện Python cần thiết:
 Chạy các tập lệnh chính một cách tuần tự, đảm bảo bạn đang ở trong thư mục của tệp bạn đã sao chép:
 
 
-            ```bash
+            ```
         python run.py
     ```
 
