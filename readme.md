@@ -18,7 +18,6 @@ adafruit-circuitpython-charlcd
 pyttsx3 
 SpeechRecognition
 
-
 ## SETUP
 1. Kết nối mô-đun cảm biến chạm điện dung vào các chân GPIO trên Raspberry Pi theo bảng sơ đồ mạch (Schematic). 
 2. Kết nối màn hình LCD 16x2 I2C vào Raspberry Pi. 
