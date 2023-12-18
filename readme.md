@@ -24,19 +24,24 @@ Kết nối microphone USB hoặc thiết bị đầu vào âm thanh vào Raspbe
 
 Sao chép kho dữ liệu về Raspberry Pi của bạn:
 
-bash
-Copy code
-git clone https://github.com/serenaphuong/glovekeyboard
+```bash
+ git clone https://github.com/serenaphuong/glovekeyboard
+    ```
+
 Cài đặt các thư viện Python cần thiết:
 
-bash
-Copy code
-pip install -r requirements.txt
+```bash
+   pip install -r requirements.txt
+    ```
+
+
+
 Chạy các tập lệnh chính một cách tuần tự, đảm bảo bạn đang ở trong thư mục của tệp bạn đã sao chép:
 
-bash
-Copy code
-python run.py
+```bash
+    python run.py
+    ```
+
 
 ## Sử dụng
 Chạm vào các cảm biến để nhập ký tự. Mỗi cảm biến được gán một cặp chữ cái.
