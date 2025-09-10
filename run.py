@@ -1,85 +1,72 @@
-from rpi_lcd import LCD
 import RPi.GPIO as GPIO
 import time
 import subprocess
-import datetime
+import speech_recognition as sr
+from rpi_lcd import LCD
 
-# Initialize LCD
+# Khởi tạo LCD
 lcd = LCD()
 
-# Set up GPIO for touch sensors
-# Bạn cần kết nối các cảm biến của mình với các chân GPIO tương ứng
-touch_pin_1 = 27  # ABC
-touch_pin_2 = 12  # DEF
-touch_pin_3 = 16  # GHI
-touch_pin_4 = 13  # JKL
-touch_pin_5 = 26  # MNO
-touch_pin_6 = 5   # PQRS
-touch_pin_7 = 14  # TUV
-touch_pin_8 = 21  # WXYZ
-touch_pin_d = 19  # Chữ Đ
-touch_pin_enter = 20 # Enter (phát âm)
-touch_pin_space = 6
-touch_pin_backspace = 15
-touch_pin_clear = 7
+# Định nghĩa các chân GPIO cho 12 cảm biến
+touch_pins = {
+    # 8 phím chữ cái (kiểu bàn phím điện thoại cũ)
+    27: ['a', 'b', 'c'],
+    12: ['d', 'e', 'f'],
+    16: ['g', 'h', 'i'],
+    13: ['j', 'k', 'l'],
+    26: ['m', 'n', 'o'],
+    5: ['p', 'q', 'r', 's'],
+    14: ['t', 'u', 'v'],
+    21: ['w', 'x', 'y', 'z'],
+    
+    # 4 phím chức năng
+    19: 'accent',    # Phím gõ dấu (chuyển sang chế độ Telex)
+    20: 'enter_or_listen',     # Phát âm văn bản hoặc Chuyển giọng nói thành văn bản
+    6: 'space',      # Phím cách
+    15: 'backspace', # Xóa lùi
+}
 
+# Cấu hình các chân GPIO
 GPIO.setmode(GPIO.BCM)
-GPIO.setup(touch_pin_1, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-GPIO.setup(touch_pin_2, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-GPIO.setup(touch_pin_3, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-GPIO.setup(touch_pin_4, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-GPIO.setup(touch_pin_5, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-GPIO.setup(touch_pin_6, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-GPIO.setup(touch_pin_7, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-GPIO.setup(touch_pin_8, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-GPIO.setup(touch_pin_d, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-GPIO.setup(touch_pin_enter, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-GPIO.setup(touch_pin_space, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-GPIO.setup(touch_pin_backspace, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-GPIO.setup(touch_pin_clear, GPIO.IN, pull_up_down=GPIO.PUD_UP)
+for pin in touch_pins.keys():
+    GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
-# Dictionaries for character mapping
-char_map = {
-    touch_pin_1: ["a", "b", "c", "A", "B", "C"],
-    touch_pin_2: ["d", "e", "f", "D", "E", "F"],
-    touch_pin_3: ["g", "h", "i", "G", "H", "I"],
-    touch_pin_4: ["j", "k", "l", "J", "K", "L"],
-    touch_pin_5: ["m", "n", "o", "M", "N", "O"],
-    touch_pin_6: ["p", "q", "r", "s", "P", "Q", "R", "S"],
-    touch_pin_7: ["t", "u", "v", "T", "U", "V"],
-    touch_pin_8: ["w", "x", "y", "z", "W", "X", "Y", "Z"],
-    touch_pin_d: ["d", "D", "đ", "Đ"], # Phím riêng cho chữ Đ
+# Ánh xạ các phím chữ cái với các phím gõ Telex
+telex_key_map = {
+    5: 's',   # Phím s (sắc)
+    12: 'f',  # Phím f (huyền)
+    16: 'r',  # Phím r (hỏi)
+    13: 'x',  # Phím x (ngã)
+    26: 'j',  # Phím j (nặng)
+    21: 'w',  # Phím w (mũ)
+    27: 'a',  # Phím a (cho â, ă)
+    14: 'd',  # Phím d (cho đ)
 }
 
-telex_accents = {
-    's': 'sắc',
-    'f': 'huyền',
-    'r': 'hỏi',
-    'x': 'ngã',
-    'j': 'nặng',
-    'w': 'mũ',
-    'a': 'trăng',
-    'd': 'đ'
-}
-
-telex_vowels = {
+# Bảng quy tắc Telex đầy đủ
+telex_rules = {
     'a': {'s': 'á', 'f': 'à', 'r': 'ả', 'x': 'ã', 'j': 'ạ', 'w': 'â', 'a': 'ă'},
     'e': {'s': 'é', 'f': 'è', 'r': 'ẻ', 'x': 'ẽ', 'j': 'ẹ', 'w': 'ê'},
     'o': {'s': 'ó', 'f': 'ò', 'r': 'ỏ', 'x': 'õ', 'j': 'ọ', 'w': 'ô'},
     'u': {'s': 'ú', 'f': 'ù', 'r': 'ủ', 'x': 'ũ', 'j': 'ụ', 'w': 'ư'},
     'y': {'s': 'ý', 'f': 'ỳ', 'r': 'ỷ', 'x': 'ỹ', 'j': 'ỵ'},
+    'd': {'d': 'đ'}
 }
 
-# Global variables
+# Biến toàn cục để theo dõi trạng thái chương trình
 input_string = ""
-last_touch_time = time.time()
+last_touch_time = 0
 last_touched_pin = None
 LCD_COLUMNS = 16
+accent_mode = False
+enter_press_start_time = 0
 
 def speak_text(text):
+    """Phát âm văn bản ra loa."""
     subprocess.call(['espeak-ng', '-v vi', text])
 
 def update_lcd(text_to_display):
+    """Cập nhật văn bản trên màn hình LCD."""
     lcd.clear()
     if len(text_to_display) > LCD_COLUMNS:
         lcd.text(text_to_display[:LCD_COLUMNS], 1)
@@ -87,96 +74,126 @@ def update_lcd(text_to_display):
     else:
         lcd.text(text_to_display, 1)
 
-# Main event handler
-def on_touch(channel):
-    global input_string, last_touch_time, last_touched_pin
+def apply_telex_rule(accent_char):
+    """Áp dụng quy tắc Telex để thêm dấu."""
+    global input_string
+    if not input_string:
+        return
     
-    current_time = time.time()
+    last_char = input_string[-1].lower()
     
-    if GPIO.input(channel) == GPIO.LOW:
-        # Enter key event
-        if channel == touch_pin_enter:
-            if input_string:
-                speak_text(input_string)
-                input_string = ""
-                update_lcd(input_string)
-            return
-
-        # Clear key event
-        if channel == touch_pin_clear:
-            input_string = ""
+    if last_char in telex_rules:
+        if accent_char in telex_rules[last_char]:
+            new_char = telex_rules[last_char][accent_char]
+            input_string = input_string[:-1] + new_char
             update_lcd(input_string)
             return
-            
-        # Backspace key event
-        if channel == touch_pin_backspace:
+        
+    update_lcd(input_string)
+
+def handle_input(channel):
+    """Xử lý đầu vào từ các phím gõ chữ và Telex."""
+    global input_string, last_touch_time, last_touched_pin, accent_mode
+    current_time = time.time()
+    
+    # Nếu đang ở chế độ gõ dấu Telex, xử lý phím gõ dấu
+    if accent_mode:
+        accent_char = telex_key_map.get(channel)
+        if accent_char:
+            apply_telex_rule(accent_char)
+        accent_mode = False
+        return
+
+    # Xử lý gõ chữ multi-tap
+    char_list = touch_pins[channel]
+    
+    if (current_time - last_touch_time) < 0.5 and last_touched_pin == channel and input_string:
+        current_char = input_string[-1]
+        try:
+            current_index = char_list.index(current_char)
+            next_index = (current_index + 1) % len(char_list)
+            input_string = input_string[:-1] + char_list[next_index]
+        except ValueError:
+            input_string += char_list[0]
+    else:
+        input_string += char_list[0]
+        
+    last_touched_pin = channel
+    last_touch_time = current_time
+    update_lcd(input_string)
+
+def listen_and_transcribe():
+    """Sử dụng microphone để chuyển giọng nói thành văn bản."""
+    global input_string
+    r = sr.Recognizer()
+    update_lcd("Đang nghe...")
+    with sr.Microphone() as source:
+        r.adjust_for_ambient_noise(source)
+        try:
+            audio = r.listen(source, timeout=5)
+            update_lcd("Đang xử lý...")
+            text = r.recognize_google(audio, language="vi-VN")
+            input_string += " " + text
+            update_lcd(input_string)
+        except sr.WaitTimeoutError:
+            update_lcd("Hết thời gian.")
+        except sr.UnknownValueError:
+            update_lcd("Không hiểu bạn nói gì.")
+        except sr.RequestError as e:
+            update_lcd(f"Lỗi: {e}")
+
+# Main event handler
+def on_touch_down(channel):
+    global enter_press_start_time
+    if GPIO.input(channel) == GPIO.LOW:
+        if touch_pins.get(channel) == 'enter_or_listen':
+            enter_press_start_time = time.time()
+
+def on_touch_up(channel):
+    global input_string, accent_mode, enter_press_start_time
+    if GPIO.input(channel) == GPIO.HIGH:
+        pin_function = touch_pins.get(channel)
+        
+        if pin_function == 'enter_or_listen':
+            press_duration = time.time() - enter_press_start_time
+            if press_duration > 1.0:
+                # Long press for listen functionality
+                listen_and_transcribe()
+            else:
+                # Short press for speak functionality
+                if input_string:
+                    speak_text(input_string)
+                    input_string = ""
+                    update_lcd("Đang phát âm...")
+                    time.sleep(1.5)
+                    update_lcd("")
+        elif pin_function == 'space':
+            input_string += " "
+            update_lcd(input_string)
+        elif pin_function == 'backspace':
             if input_string:
                 input_string = input_string[:-1]
             update_lcd(input_string)
-            return
+        elif pin_function == 'accent':
+            accent_mode = True
+            update_lcd("Chọn dấu...")
+        else:
+            handle_input(channel)
 
-        # Space key event
-        if channel == touch_pin_space:
-            input_string += " "
-            last_touched_pin = None
-            update_lcd(input_string)
-            return
-            
-        # General character and Telex logic
-        char_added = ""
-        
-        # Check if the touch is a Telex accent key
-        if channel in telex_accents:
-            if input_string:
-                last_char = input_string[-1].lower()
-                telex_key = telex_accents[channel]
-                
-                # Special case for 'đ' from 'd'
-                if last_char == 'd' and telex_key == 'đ':
-                    input_string = input_string[:-1] + 'đ'
-                # Check for other telex accents
-                elif last_char in telex_vowels and telex_key in telex_vowels[last_char]:
-                    input_string = input_string[:-1] + telex_vowels[last_char][telex_key]
-                else:
-                    input_string += telex_key[0] # Add first letter of accent name
-            else:
-                input_string += telex_accents[channel][0]
-            update_lcd(input_string)
-            return
-
-        # Check for a regular character keypress
-        if channel in char_map:
-            current_char_list = char_map[channel]
-            
-            # Check for consecutive press
-            if (current_time - last_touch_time) < 1.0 and last_touched_pin == channel and input_string:
-                if input_string[-1] in current_char_list:
-                    current_index = current_char_list.index(input_string[-1])
-                    next_index = (current_index + 1) % len(current_char_list)
-                    input_string = input_string[:-1] + current_char_list[next_index]
-                else:
-                    input_string += current_char_list[0]
-            else:
-                input_string += current_char_list[0]
-            
-            last_touched_pin = channel
-            last_touch_time = current_time
-            update_lcd(input_string)
-            
-# Register events for all touch sensors
-all_touch_pins = [touch_pin_1, touch_pin_2, touch_pin_3, touch_pin_4, touch_pin_5,
-                  touch_pin_6, touch_pin_7, touch_pin_8, touch_pin_d,
-                  touch_pin_enter, touch_pin_space, touch_pin_backspace, touch_pin_clear]
-
-for pin in all_touch_pins:
-    GPIO.add_event_detect(pin, GPIO.FALLING, callback=on_touch, bouncetime=200)
+# Đăng ký sự kiện cho tất cả các cảm biến
+for pin in touch_pins.keys():
+    GPIO.add_event_detect(pin, GPIO.FALLING, callback=on_touch_down, bouncetime=10)
+    GPIO.add_event_detect(pin, GPIO.RISING, callback=on_touch_up, bouncetime=10)
 
 try:
+    print("Găng tay đã sẵn sàng. Bắt đầu gõ!")
+    update_lcd("Sẵn sàng...")
     while True:
         time.sleep(0.1)
 
 except KeyboardInterrupt:
-    pass
+    print("Dừng chương trình.")
 
 finally:
     GPIO.cleanup()
+    lcd.clear()
