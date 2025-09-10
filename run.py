@@ -7,7 +7,7 @@ from rpi_lcd import LCD
 # Khởi tạo LCD
 lcd = LCD()
 
-# Định nghĩa các chân GPIO cho 12 cảm biến
+# Định nghĩa các chân GPIO cho 9 cảm biến
 touch_pins = {
     # 8 phím chữ cái (kiểu bàn phím điện thoại cũ)
     27: ['a', 'b', 'c'],
@@ -19,11 +19,8 @@ touch_pins = {
     14: ['t', 'u', 'v'],
     21: ['w', 'x', 'y', 'z'],
     
-    # 4 phím chức năng
-    19: 'accent',    # Phím gõ dấu (chuyển sang chế độ Telex)
-    20: 'enter_or_listen',     # Phát âm văn bản hoặc Chuyển giọng nói thành văn bản
-    6: 'space',      # Phím cách
-    15: 'backspace', # Xóa lùi
+    # 1 phím chức năng đa năng
+    19: 'function_key',
 }
 
 # Cấu hình các chân GPIO
@@ -59,7 +56,9 @@ last_touch_time = 0
 last_touched_pin = None
 LCD_COLUMNS = 16
 accent_mode = False
-enter_press_start_time = 0
+function_tap_count = 0
+function_last_tap_time = 0
+function_press_start_time = 0
 
 def speak_text(text):
     """Phát âm văn bản ra loa."""
@@ -91,9 +90,9 @@ def apply_telex_rule(accent_char):
         
     update_lcd(input_string)
 
-def handle_input(channel):
+def handle_character_input(channel):
     """Xử lý đầu vào từ các phím gõ chữ và Telex."""
-    global input_string, last_touch_time, last_touched_pin, accent_mode
+    global input_string, last_touch_time, last_touched_pin, accent_mode, function_tap_count
     current_time = time.time()
     
     # Nếu đang ở chế độ gõ dấu Telex, xử lý phím gõ dấu
@@ -120,6 +119,7 @@ def handle_input(channel):
         
     last_touched_pin = channel
     last_touch_time = current_time
+    function_tap_count = 0 # Reset function tap count
     update_lcd(input_string)
 
 def listen_and_transcribe():
@@ -144,41 +144,50 @@ def listen_and_transcribe():
 
 # Main event handler
 def on_touch_down(channel):
-    global enter_press_start_time
+    global function_press_start_time
     if GPIO.input(channel) == GPIO.LOW:
-        if touch_pins.get(channel) == 'enter_or_listen':
-            enter_press_start_time = time.time()
+        if touch_pins.get(channel) == 'function_key':
+            function_press_start_time = time.time()
 
 def on_touch_up(channel):
-    global input_string, accent_mode, enter_press_start_time
+    global input_string, accent_mode, last_touched_pin, function_tap_count, function_last_tap_time
+    
     if GPIO.input(channel) == GPIO.HIGH:
         pin_function = touch_pins.get(channel)
         
-        if pin_function == 'enter_or_listen':
-            press_duration = time.time() - enter_press_start_time
+        if pin_function == 'function_key':
+            press_duration = time.time() - function_press_start_time
             if press_duration > 1.0:
-                # Long press for listen functionality
+                # Nhấn giữ lâu để nghe
                 listen_and_transcribe()
+                function_tap_count = 0
             else:
-                # Short press for speak functionality
-                if input_string:
-                    speak_text(input_string)
-                    input_string = ""
-                    update_lcd("Đang phát âm...")
-                    time.sleep(1.5)
-                    update_lcd("")
-        elif pin_function == 'space':
-            input_string += " "
-            update_lcd(input_string)
-        elif pin_function == 'backspace':
-            if input_string:
-                input_string = input_string[:-1]
-            update_lcd(input_string)
-        elif pin_function == 'accent':
-            accent_mode = True
-            update_lcd("Chọn dấu...")
+                # Nhấn nhanh để kích hoạt các chức năng khác
+                current_time = time.time()
+                if (current_time - function_last_tap_time) > 0.5:
+                    function_tap_count = 1
+                else:
+                    function_tap_count += 1
+                
+                function_last_tap_time = current_time
+
+                if function_tap_count == 1:
+                    # Nhấn 1 lần: Phím cách
+                    input_string += " "
+                    update_lcd(input_string)
+                elif function_tap_count == 2:
+                    # Nhấn 2 lần: Xóa lùi
+                    if input_string:
+                        input_string = input_string[:-1]
+                    update_lcd(input_string)
+                elif function_tap_count == 3:
+                    # Nhấn 3 lần: Gõ dấu
+                    accent_mode = True
+                    update_lcd("Chọn dấu...")
+                    function_tap_count = 0 # Reset sau khi chọn dấu
+
         else:
-            handle_input(channel)
+            handle_character_input(channel)
 
 # Đăng ký sự kiện cho tất cả các cảm biến
 for pin in touch_pins.keys():
