@@ -69,9 +69,31 @@ def speak_text(text):
         print("Lỗi: espeak-ng không được cài đặt. Vui lòng cài đặt bằng lệnh: sudo apt-get install espeak-ng")
 
 def remove_accents(input_str):
-    """Chuyển đổi chuỗi tiếng Việt có dấu thành không dấu."""
-    nfkd_form = unicodedata.normalize('NFKD', input_str)
-    return ''.join([c for c in nfkd_form if not unicodedata.combining(c)])
+    """
+    Chuyển đổi chuỗi tiếng Việt có dấu thành không dấu bằng cách thay thế trực tiếp
+    để đảm bảo tương thích với màn hình LCD.
+    """
+    vietnamese_map = {
+        'a': 'aàảãáạăằẳẵắặâầẩẫấậ',
+        'e': 'eèẻẽéẹêềểễếệ',
+        'i': 'iìỉĩíị',
+        'o': 'oòỏõóọôồổỗốộơờởỡớợ',
+        'u': 'uùủũúụưừửữứự',
+        'y': 'yỳỷỹýỵ',
+        'd': 'dđ'
+    }
+    
+    result = ""
+    for char in input_str:
+        found = False
+        for replacement_char, accented_chars in vietnamese_map.items():
+            if char.lower() in accented_chars:
+                result += replacement_char if char.islower() else replacement_char.upper()
+                found = True
+                break
+        if not found:
+            result += char
+    return result
 
 def update_lcd(text_to_display):
     """Cập nhật văn bản trên màn hình LCD."""
@@ -210,7 +232,7 @@ for pin in touch_pins.keys():
 
 try:
     print("Găng tay đã sẵn sàng. Bắt đầu gõ!")
-    update_lcd("San sang...")
+    update_lcd("Sẵn sàng...")
     while True:
         time.sleep(0.1)
 
