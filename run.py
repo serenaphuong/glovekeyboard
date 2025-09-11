@@ -68,6 +68,25 @@ def speak_text(text):
     except FileNotFoundError:
         print("Lỗi: espeak-ng không được cài đặt. Vui lòng cài đặt bằng lệnh: sudo apt-get install espeak-ng")
 
+def create_custom_chars():
+    """Tạo các ký tự tùy chỉnh cho tiếng Việt trên LCD."""
+    # Định nghĩa các ký tự đặc biệt và byte code của chúng
+    # Mỗi ký tự là một mảng 8 byte, mỗi byte đại diện cho một hàng pixel
+    char_a = [0x00, 0x00, 0x01, 0x02, 0x11, 0x11, 0x0E, 0x00]  # ă
+    char_a_hat = [0x04, 0x00, 0x0A, 0x11, 0x11, 0x11, 0x0E, 0x00] # â
+    char_d_bar = [0x00, 0x08, 0x09, 0x0A, 0x0C, 0x0A, 0x09, 0x08] # đ
+    char_e_hat = [0x04, 0x0A, 0x11, 0x1F, 0x11, 0x11, 0x11, 0x00] # ê
+    char_o_hat = [0x00, 0x00, 0x0E, 0x11, 0x11, 0x11, 0x0E, 0x00] # ô
+    char_u_hat = [0x00, 0x00, 0x11, 0x11, 0x11, 0x11, 0x0E, 0x00] # ư
+    
+    # Gửi các ký tự tùy chỉnh đến LCD CGRAM (0-5)
+    lcd.create_char(0, char_a)
+    lcd.create_char(1, char_a_hat)
+    lcd.create_char(2, char_d_bar)
+    lcd.create_char(3, char_e_hat)
+    lcd.create_char(4, char_o_hat)
+    lcd.create_char(5, char_u_hat)
+
 def remove_accents(input_str):
     """Chuyển đổi chuỗi tiếng Việt có dấu thành không dấu."""
     nfkd_form = unicodedata.normalize('NFKD', input_str)
@@ -80,14 +99,24 @@ def filter_lcd_string(input_str):
 
 def update_lcd(text_to_display):
     """Cập nhật văn bản trên màn hình LCD."""
-    text_no_accents = remove_accents(text_to_display)
-    filtered_text = filter_lcd_string(text_no_accents)
+    # Ánh xạ các ký tự tiếng Việt có dấu thành ký tự tùy chỉnh hoặc không dấu
+    vietnamese_map = {'ă': chr(0), 'â': chr(1), 'đ': chr(2), 'ê': chr(3), 'ô': chr(4), 'ư': chr(5)}
+    
+    display_text = ""
+    for char in text_to_display:
+        if char.lower() in vietnamese_map:
+            display_text += vietnamese_map[char.lower()]
+        else:
+            display_text += char
+    
+    display_text = filter_lcd_string(display_text)
+    
     lcd.clear()
-    if len(filtered_text) > LCD_COLUMNS:
-        lcd.text(filtered_text[:LCD_COLUMNS], 1)
-        lcd.text(filtered_text[LCD_COLUMNS:], 2)
+    if len(display_text) > LCD_COLUMNS:
+        lcd.text(display_text[:LCD_COLUMNS], 1)
+        lcd.text(display_text[LCD_COLUMNS:], 2)
     else:
-        lcd.text(filtered_text, 1)
+        lcd.text(display_text, 1)
 
 def apply_telex_rule(accent_char):
     """Áp dụng quy tắc Telex để thêm dấu."""
@@ -215,6 +244,7 @@ for pin in touch_pins.keys():
 
 try:
     print("Găng tay đã sẵn sàng. Bắt đầu gõ!")
+    create_custom_chars() # Tạo ký tự tùy chỉnh trước khi bắt đầu
     update_lcd("San sang...")
     while True:
         time.sleep(0.1)
