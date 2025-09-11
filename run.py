@@ -8,12 +8,12 @@ import os
 from gtts import gTTS
 import simpleaudio as sa
 
-# ==================== Khởi tạo phần cứng ====================
+# ==================== Hardware Initialization ====================
 lcd = LCD()
 
-# Định nghĩa các chân GPIO cho 9 cảm biến
+# Define GPIO pins for the 9 sensors
 touch_pins = {
-    # 8 phím chữ cái
+    # 8 letter keys
     27: ['a', 'ă', 'â', 'b', 'c'],
     12: ['d', 'đ', 'e', 'ê', 'g'],
     16: ['h', 'i', 'k', 'l'],
@@ -23,49 +23,48 @@ touch_pins = {
     14: ['z'],
     21: ['w'],
     
-    # 1 phím chức năng đa năng
-    19: [' ', '<del>', '<speak>', '<listen>'],
+    # 1 multi-function key
+    19: 'function_key',
 }
 
-# Cấu hình các chân GPIO
+# Configure GPIO pins
 GPIO.setmode(GPIO.BCM)
 for pin in touch_pins.keys():
     GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
-# ==================== Logic gõ Telex ====================
+# ==================== Telex Input Logic ====================
 telex_key_map = {
-    's': 's',   # Phím s (sắc)
-    'f': 'f',  # Phím f (huyền)
-    'r': 'r',  # Phím r (hỏi)
-    'x': 'x',  # Phím x (ngã)
-    'j': 'j',  # Phím j (nặng)
-    'w': 'w',  # Phím w (mũ)
-    'a': 'a',  # Phím a (cho â, ă)
-    'd': 'd',  # Phím d (cho đ)
+    # Phím tương ứng với dấu, không phải chữ cái
+    26: 's',   # Phím s (sắc)
+    12: 'f',  # Phím f (huyền)
+    16: 'r',  # Phím r (hỏi)
+    5: 'x',  # Phím x (ngã)
+    13: 'j',  # Phím j (nặng)
+    21: 'w',  # Phím w (mũ)
+    27: 'a',  # Phím a (cho â, ă)
+    14: 'd',  # Phím d (cho đ)
 }
 
 telex_rules = {
     'a': {'s': 'á', 'f': 'à', 'r': 'ả', 'x': 'ã', 'j': 'ạ', 'w': 'â', 'a': 'ă'},
     'e': {'s': 'é', 'f': 'è', 'r': 'ẻ', 'x': 'ẽ', 'j': 'ẹ', 'w': 'ê'},
-    'o': {'s': 'ó', 'f': 'ò', 'r': 'ỏ', 'x': 'õ', 'j': 'ọ', 'w': 'ô'},
+    'o': {'s': 'ó', 'f': 'ò', 'r': 'ỏ', 'x': 'õ', 'j': 'ọ', 'w': 'ô', 'a': 'ơ'},
     'u': {'s': 'ú', 'f': 'ù', 'r': 'ủ', 'x': 'ũ', 'j': 'ụ', 'w': 'ư'},
     'y': {'s': 'ý', 'f': 'ỳ', 'r': 'ỷ', 'x': 'ỹ', 'j': 'ỵ'},
     'd': {'d': 'đ'}
 }
 
-# ==================== Biến trạng thái toàn cục ====================
+# ==================== Global State Variables ====================
 input_string = ""
 last_touch_time = 0
 last_touched_pin = None
 LCD_COLUMNS = 16
-accent_mode = False
 function_tap_count = 0
 function_last_tap_time = 0
-function_press_start_time = 0
 
-# ==================== Hàm tiện ích ====================
+# ==================== Utility Functions ====================
 def speak_text(text):
-    """Phát âm văn bản ra loa bằng gTTS và simpleaudio."""
+    """Speaks the text out loud using gTTS and simpleaudio."""
     try:
         tts = gTTS(text=text, lang='vi', slow=False)
         tts.save("temp.mp3")
@@ -74,13 +73,13 @@ def speak_text(text):
         play_obj.wait_done()
         os.remove("temp.mp3")
     except Exception as e:
-        print(f"Lỗi khi phát âm: {e}")
+        print(f"Error speaking text: {e}")
         update_lcd("Loi phat am")
 
 def remove_accents(input_str):
     """
-    Chuyển đổi chuỗi tiếng Việt có dấu thành không dấu bằng cách ánh xạ thủ công.
-    Đây là phương pháp đáng tin cậy nhất để đảm bảo tương thích với màn hình LCD.
+    Converts a Vietnamese string with accents to a string without accents
+    by using a manual mapping. This is the most reliable method for LCD compatibility.
     """
     if not isinstance(input_str, str):
         return ""
@@ -106,7 +105,7 @@ def remove_accents(input_str):
     return result
 
 def update_lcd(text_to_display):
-    """Cập nhật văn bản trên màn hình LCD."""
+    """Updates the text on the LCD screen."""
     display_text = remove_accents(text_to_display)
     
     lcd.clear()
@@ -116,88 +115,8 @@ def update_lcd(text_to_display):
     else:
         lcd.text(display_text, 1)
 
-def apply_telex_rule(accent_char):
-    """Áp dụng quy tắc Telex để thêm dấu."""
-    global input_string
-    if not input_string:
-        return
-    
-    last_char = input_string[-1].lower()
-    
-    if last_char in telex_rules:
-        if accent_char in telex_rules[last_char]:
-            new_char = telex_rules[last_char][accent_char]
-            input_string = input_string[:-1] + new_char
-            update_lcd(input_string)
-            return
-        
-    update_lcd(input_string)
-
-def handle_input(channel):
-    """Xử lý đầu vào từ các phím gõ chữ và phím chức năng."""
-    global input_string, last_touch_time, last_touched_pin, accent_mode
-    current_time = time.time()
-    
-    key_list = touch_pins.get(channel)
-    if not key_list:
-        return
-    
-    # Logic gõ Telex
-    if accent_mode:
-        if isinstance(key_list, list):
-            for key in key_list:
-                if key in telex_key_map.values():
-                    apply_telex_rule(key)
-        accent_mode = False
-        return
-
-    # Logic xử lý các phím chức năng
-    if channel == 19:
-        if (current_time - last_touch_time) < 1.0 and last_touched_pin == channel:
-            current_index = key_list.index(input_string[-1]) if input_string and input_string[-1] in key_list else -1
-            next_index = (current_index + 1) % len(key_list)
-            action = key_list[next_index]
-        else:
-            action = key_list[0]
-            
-        if action == ' ':
-            input_string += " "
-        elif action == '<del>':
-            if input_string:
-                input_string = input_string[:-1]
-        elif action == '<speak>':
-            speak_text(input_string)
-        elif action == '<listen>':
-            listen_and_transcribe()
-            
-        last_touched_pin = channel
-        last_touch_time = current_time
-        update_lcd(input_string)
-        return
-
-    # Logic gõ chữ và chuyển ký tự (Multi-tap)
-    char_list = key_list
-    if isinstance(char_list, list):
-        if (current_time - last_touch_time) < 1.0 and last_touched_pin == channel and input_string:
-            current_char = input_string[-1]
-            try:
-                current_index = char_list.index(current_char)
-                next_index = (current_index + 1) % len(char_list)
-                input_string = input_string[:-1] + char_list[next_index]
-            except ValueError:
-                input_string += char_list[0]
-        else:
-            input_string += char_list[0]
-    else: # Ký tự đơn
-        input_string += char_list
-
-    last_touched_pin = channel
-    last_touch_time = current_time
-    update_lcd(input_string)
-
-
 def listen_and_transcribe():
-    """Sử dụng microphone để chuyển giọng nói thành văn bản."""
+    """Uses the microphone to transcribe speech to text."""
     global input_string
     r = sr.Recognizer()
     update_lcd("Dang nghe...")
@@ -216,14 +135,87 @@ def listen_and_transcribe():
         except sr.RequestError as e:
             update_lcd(f"Loi: {e}")
 
-# ==================== Hàm xử lý chính ====================
-def on_touch_event(channel):
-    if GPIO.input(channel) == GPIO.HIGH:
-        handle_input(channel)
+def handle_character_input(channel):
+    """Handles input from the character keys (multi-tap logic)."""
+    global input_string, last_touch_time, last_touched_pin
+    current_time = time.time()
+    TAP_WINDOW = 0.5 # Window for multi-tap, in seconds
+    
+    char_list = touch_pins.get(channel)
+    if not char_list:
+        return
 
-# ==================== Vòng lặp chính ====================
-# Đăng ký sự kiện cho tất cả các cảm biến với chế độ phát hiện cả hai cạnh
-# Thay đổi bouncetime về 50ms để chống nảy phím hiệu quả
+    # Multi-tap logic for character selection
+    if (current_time - last_touch_time) < TAP_WINDOW and last_touched_pin == channel and input_string:
+        current_char = input_string[-1]
+        try:
+            current_index = char_list.index(current_char)
+            next_index = (current_index + 1) % len(char_list)
+            input_string = input_string[:-1] + char_list[next_index]
+        except ValueError:
+            input_string += char_list[0]
+    else:
+        input_string += char_list[0]
+
+    last_touched_pin = channel
+    last_touch_time = current_time
+    update_lcd(input_string)
+
+def handle_function_input(channel):
+    """Handles input from the function key (multi-tap logic for actions)."""
+    global input_string, function_tap_count, function_last_tap_time
+    current_time = time.time()
+    # Thời gian chờ được đặt riêng cho phím chức năng
+    FUNCTION_TAP_WINDOW = 2.0 
+    
+    # Check if this tap is part of the same sequence
+    if (current_time - function_last_tap_time) > FUNCTION_TAP_WINDOW:
+        function_tap_count = 1
+    else:
+        function_tap_count += 1
+    
+    function_last_tap_time = current_time
+
+    # Execute action based on tap count
+    if function_tap_count == 1:
+        # Tap once: Add a space
+        input_string += " "
+        update_lcd(input_string)
+    elif function_tap_count == 2:
+        # Tap twice: Backspace
+        if input_string:
+            input_string = input_string[:-1]
+        update_lcd(input_string)
+    elif function_tap_count == 3:
+        # Tap three times: Speak the text
+        speak_text(input_string)
+    elif function_tap_count == 4:
+        # Tap four times: Listen
+        listen_and_transcribe()
+        function_tap_count = 0 # Reset after the last action
+    
+    # For taps beyond 4, reset the counter
+    if function_tap_count > 4:
+        function_tap_count = 0
+
+
+# ==================== Main Event Loop ====================
+def on_touch_event(channel):
+    """
+    Main callback function triggered by GPIO events.
+    Handles key release (rising edge) to prevent multiple triggers.
+    """
+    # Only process on key release to handle debounce
+    if GPIO.input(channel) == GPIO.HIGH:
+        if touch_pins.get(channel) == 'function_key':
+            handle_function_input(channel)
+        elif channel in telex_key_map:
+            apply_telex_rule(telex_key_map[channel])
+        else:
+            handle_character_input(channel)
+
+# Register event detection for all sensors on both edges (rising and falling)
+# Set a bouncetime to prevent switch bounce
 for pin in touch_pins.keys():
     GPIO.add_event_detect(pin, GPIO.BOTH, callback=on_touch_event, bouncetime=50)
 
