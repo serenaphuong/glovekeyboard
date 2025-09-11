@@ -4,6 +4,9 @@ import subprocess
 import speech_recognition as sr
 from rpi_lcd import LCD
 import unicodedata
+import os
+from gtts import gTTS
+import simpleaudio as sa
 
 # ==================== Khởi tạo phần cứng ====================
 lcd = LCD()
@@ -62,11 +65,17 @@ function_press_start_time = 0
 
 # ==================== Hàm tiện ích ====================
 def speak_text(text):
-    """Phát âm văn bản ra loa."""
+    """Phát âm văn bản ra loa bằng gTTS và simpleaudio."""
     try:
-        subprocess.call(['espeak-ng', '-v vi', text])
-    except FileNotFoundError:
-        print("Lỗi: espeak-ng không được cài đặt. Vui lòng cài đặt bằng lệnh: sudo apt-get install espeak-ng")
+        tts = gTTS(text=text, lang='vi', slow=False)
+        tts.save("temp.mp3")
+        wave_obj = sa.WaveObject.from_wave_file("temp.mp3")
+        play_obj = wave_obj.play()
+        play_obj.wait_done()
+        os.remove("temp.mp3")
+    except Exception as e:
+        print(f"Lỗi khi phát âm: {e}")
+        update_lcd("Loi phat am")
 
 def remove_accents(input_str):
     """
