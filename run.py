@@ -3,6 +3,7 @@ import time
 import subprocess
 import speech_recognition as sr
 from rpi_lcd import LCD
+import unicodedata
 
 # ==================== Khởi tạo phần cứng ====================
 lcd = LCD()
@@ -67,14 +68,20 @@ def speak_text(text):
     except FileNotFoundError:
         print("Lỗi: espeak-ng không được cài đặt. Vui lòng cài đặt bằng lệnh: sudo apt-get install espeak-ng")
 
+def remove_accents(input_str):
+    """Chuyển đổi chuỗi tiếng Việt có dấu thành không dấu."""
+    nfkd_form = unicodedata.normalize('NFKD', input_str)
+    return ''.join([c for c in nfkd_form if not unicodedata.combining(c)])
+
 def update_lcd(text_to_display):
     """Cập nhật văn bản trên màn hình LCD."""
+    text_no_accents = remove_accents(text_to_display)
     lcd.clear()
-    if len(text_to_display) > LCD_COLUMNS:
-        lcd.text(text_to_display[:LCD_COLUMNS], 1)
-        lcd.text(text_to_display[LCD_COLUMNS:], 2)
+    if len(text_no_accents) > LCD_COLUMNS:
+        lcd.text(text_no_accents[:LCD_COLUMNS], 1)
+        lcd.text(text_no_accents[LCD_COLUMNS:], 2)
     else:
-        lcd.text(text_to_display, 1)
+        lcd.text(text_no_accents, 1)
 
 def apply_telex_rule(accent_char):
     """Áp dụng quy tắc Telex để thêm dấu."""
@@ -138,9 +145,9 @@ def listen_and_transcribe():
         except sr.WaitTimeoutError:
             update_lcd("Hết thời gian.")
         except sr.UnknownValueError:
-            update_lcd("Không hiểu bạn nói gì.")
+            update_lcd("Khong hieu ban noi gi.")
         except sr.RequestError as e:
-            update_lcd(f"Lỗi: {e}")
+            update_lcd(f"Loi: {e}")
 
 # ==================== Hàm xử lý chính ====================
 def on_touch_event(channel):
@@ -182,9 +189,13 @@ def on_touch_event(channel):
                 elif function_tap_count == 3:
                     # Nhấn 3 lần: Gõ dấu
                     accent_mode = True
-                    update_lcd("Chọn dấu...")
+                    update_lcd("Chon dau...")
                     function_tap_count = 0 
-                elif function_tap_count > 3:
+                elif function_tap_count == 4:
+                    # Nhấn 4 lần: Đọc văn bản
+                    speak_text(input_string)
+                    function_tap_count = 0
+                elif function_tap_count > 4:
                     function_tap_count = 0 
         else:
             handle_character_input(channel)
@@ -196,7 +207,7 @@ for pin in touch_pins.keys():
 
 try:
     print("Găng tay đã sẵn sàng. Bắt đầu gõ!")
-    update_lcd("Sẵn sàng...")
+    update_lcd("San sang...")
     while True:
         time.sleep(0.1)
 
