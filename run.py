@@ -120,8 +120,8 @@ def handle_character_input(channel):
 
     char_list = touch_pins[channel]
     
-    # Kiểm tra xem đây có phải là một cú chạm liên tiếp trên cùng một phím trong vòng 0.75 giây không.
-    if (current_time - last_touch_time) < 0.75 and last_touched_pin == channel and input_string:
+    # Kiểm tra xem đây có phải là một cú chạm liên tiếp trên cùng một phím trong vòng 2.0 giây không.
+    if (current_time - last_touch_time) < 2.0 and last_touched_pin == channel and input_string:
         current_char = input_string[-1]
         try:
             current_index = char_list.index(current_char)
