@@ -188,12 +188,7 @@ def on_touch_event(channel):
         
         if pin_function == 'function_key':
             press_duration = time.time() - function_press_start_time
-            if press_duration > 3.0:
-                # Nhấn giữ lâu (trên 3.0 giây) để nghe
-                listen_and_transcribe()
-                function_tap_count = 0
-            else:
-                # Nhấn nhanh để kích hoạt các chức năng khác
+            if press_duration < 3.0: # Xử lý các lần nhấn ngắn
                 current_time = time.time()
                 if (current_time - function_last_tap_time) > 0.5:
                     function_tap_count = 0
@@ -202,23 +197,21 @@ def on_touch_event(channel):
                 function_last_tap_time = current_time
                 
                 if function_tap_count == 1:
-                    # Nhấn 1 lần: Phím cách
+                    # Nhấn 1 lần: Đọc văn bản
+                    speak_text(input_string)
+                elif function_tap_count == 2:
+                    # Nhấn 2 lần: Phím cách
                     input_string += " "
                     update_lcd(input_string)
-                elif function_tap_count == 2:
-                    # Nhấn 2 lần: Xóa lùi
+                elif function_tap_count == 3:
+                    # Nhấn 3 lần: Xóa lùi
                     if input_string:
                         input_string = input_string[:-1]
                     update_lcd(input_string)
-                elif function_tap_count == 3:
-                    # Nhấn 3 lần: Gõ dấu
-                    accent_mode = True
-                    update_lcd("Chon dau...")
-                    function_tap_count = 0 
                 elif function_tap_count == 4:
-                    # Nhấn 4 lần: Đọc văn bản
-                    speak_text(input_string)
-                    function_tap_count = 0
+                    # Nhấn 4 lần: Nghe và chuyển giọng nói thành văn bản
+                    listen_and_transcribe()
+                    function_tap_count = 0 
                 elif function_tap_count > 4:
                     function_tap_count = 0 
         else:
@@ -232,7 +225,7 @@ for pin in touch_pins.keys():
 
 try:
     print("Găng tay đã sẵn sàng. Bắt đầu gõ!")
-    update_lcd("Sẵn sàng...")
+    update_lcd("San sang...")
     while True:
         time.sleep(0.1)
 
