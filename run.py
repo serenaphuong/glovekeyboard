@@ -79,11 +79,31 @@ def speak_text(text):
 
 def remove_accents(input_str):
     """
-    Chuyển đổi chuỗi tiếng Việt có dấu thành không dấu bằng phương pháp chuẩn
-    Unicode normalization, đảm bảo tương thích với màn hình LCD.
+    Chuyển đổi chuỗi tiếng Việt có dấu thành không dấu bằng cách ánh xạ thủ công.
+    Đây là phương pháp đáng tin cậy nhất để đảm bảo tương thích với màn hình LCD.
     """
-    normalized_str = unicodedata.normalize('NFD', input_str)
-    return normalized_str.encode('ascii', 'ignore').decode('utf-8')
+    if not isinstance(input_str, str):
+        return ""
+
+    accents_mapping = {
+        'á': 'a', 'à': 'a', 'ả': 'a', 'ã': 'a', 'ạ': 'a', 'ă': 'a', 'â': 'a',
+        'é': 'e', 'è': 'e', 'ẻ': 'e', 'ẽ': 'e', 'ẹ': 'e', 'ê': 'e',
+        'ó': 'o', 'ò': 'o', 'ỏ': 'o', 'õ': 'o', 'ọ': 'o', 'ô': 'o', 'ơ': 'o',
+        'ú': 'u', 'ù': 'u', 'ủ': 'u', 'ũ': 'u', 'ụ': 'u', 'ư': 'u',
+        'ý': 'y', 'ỳ': 'y', 'ỷ': 'y', 'ỹ': 'y', 'ỵ': 'y',
+        'đ': 'd',
+        'Á': 'A', 'À': 'A', 'Ả': 'A', 'Ã': 'A', 'Ạ': 'A', 'Ă': 'A', 'Â': 'A',
+        'É': 'E', 'È': 'E', 'Ẻ': 'E', 'Ẽ': 'E', 'Ẹ': 'E', 'Ê': 'E',
+        'Ó': 'O', 'Ò': 'O', 'Ỏ': 'O', 'Õ': 'O', 'Ọ': 'O', 'Ô': 'O', 'Ơ': 'O',
+        'Ú': 'U', 'Ù': 'U', 'Ủ': 'U', 'Ũ': 'U', 'Ụ': 'U', 'Ư': 'U',
+        'Ý': 'Y', 'Ỳ': 'Y', 'Ỷ': 'Y', 'Ỹ': 'Y', 'Ỵ': 'Y',
+        'Đ': 'D'
+    }
+
+    result = ""
+    for char in input_str:
+        result += accents_mapping.get(char, char)
+    return result
 
 def update_lcd(text_to_display):
     """Cập nhật văn bản trên màn hình LCD."""
