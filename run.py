@@ -135,6 +135,27 @@ def listen_and_transcribe():
         except sr.RequestError as e:
             update_lcd(f"Loi: {e}")
 
+def apply_telex_rule(telex_key):
+    """Applies a Telex rule based on the key pressed."""
+    global input_string
+    
+    if not input_string:
+        return
+    
+    last_char = input_string[-1].lower()
+    
+    # Check if the last character is a vowel that can have a Telex mark
+    if last_char in telex_rules:
+        # Check if the telex rule exists for the key pressed
+        if telex_key in telex_rules[last_char]:
+            new_char = telex_rules[last_char][telex_key]
+            input_string = input_string[:-1] + new_char
+            update_lcd(input_string)
+        else:
+            # Handle cases where the key pressed doesn't match a rule
+            # For example, pressing 's' after 'u' should not do anything.
+            pass
+    
 def handle_character_input(channel):
     """Handles input from the character keys (multi-tap logic)."""
     global input_string, last_touch_time, last_touched_pin
