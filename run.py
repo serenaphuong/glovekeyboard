@@ -13,15 +13,15 @@ lcd = LCD()
 
 # Định nghĩa các chân GPIO cho 9 cảm biến
 touch_pins = {
-    # 8 phím chữ cái (kiểu bàn phím điện thoại cũ)
-    27: ['a', 'b', 'c'],
-    12: ['d', 'e', 'f'],
-    16: ['g', 'h', 'i'],
-    13: ['j', 'k', 'l'],
-    26: ['m', 'n', 'o'],
-    5: ['p', 'q', 'r', 's'],
-    14: ['t', 'u', 'v'],
-    21: ['w', 'x', 'y', 'z'],
+    # 8 phím chữ cái và dấu (theo Telex)
+    27: 'a',  # Phím A
+    12: 'e',  # Phím E
+    16: 'o',  # Phím O
+    13: 'u',  # Phím U
+    26: 'i',  # Phím I
+    5: ['s', 'x'],   # Dấu Sắc và Ngã
+    14: ['f', 'j'],  # Dấu Huyền và Nặng
+    21: ['r', 'w', 'd'],  # Dấu Hỏi, Mũ và D
     
     # 1 phím chức năng đa năng
     19: 'function_key',
@@ -34,14 +34,14 @@ for pin in touch_pins.keys():
 
 # ==================== Logic gõ Telex ====================
 telex_key_map = {
-    5: 's',   # Phím s (sắc)
-    12: 'f',  # Phím f (huyền)
-    16: 'r',  # Phím r (hỏi)
-    13: 'x',  # Phím x (ngã)
-    26: 'j',  # Phím j (nặng)
-    21: 'w',  # Phím w (mũ)
-    27: 'a',  # Phím a (cho â, ă)
-    14: 'd',  # Phím d (cho đ)
+    's': 's',   # Phím s (sắc)
+    'f': 'f',  # Phím f (huyền)
+    'r': 'r',  # Phím r (hỏi)
+    'x': 'x',  # Phím x (ngã)
+    'j': 'j',  # Phím j (nặng)
+    'w': 'w',  # Phím w (mũ)
+    'a': 'a',  # Phím a (cho â, ă)
+    'd': 'd',  # Phím d (cho đ)
 }
 
 telex_rules = {
@@ -79,30 +79,11 @@ def speak_text(text):
 
 def remove_accents(input_str):
     """
-    Chuyển đổi chuỗi tiếng Việt có dấu thành không dấu bằng cách thay thế trực tiếp
-    để đảm bảo tương thích với màn hình LCD.
+    Chuyển đổi chuỗi tiếng Việt có dấu thành không dấu bằng phương pháp chuẩn
+    Unicode normalization, đảm bảo tương thích với màn hình LCD.
     """
-    vietnamese_map = {
-        'a': 'aàảãáạăằẳẵắặâầẩẫấậ',
-        'e': 'eèẻẽéẹêềểễếệ',
-        'i': 'iìỉĩíị',
-        'o': 'oòỏõóọôồổỗốộơờởỡớợ',
-        'u': 'uùủũúụưừửữứự',
-        'y': 'yỳỷỹýỵ',
-        'd': 'dđ'
-    }
-    
-    result = ""
-    for char in input_str:
-        found = False
-        for replacement_char, accented_chars in vietnamese_map.items():
-            if char.lower() in accented_chars:
-                result += replacement_char if char.islower() else replacement_char.upper()
-                found = True
-                break
-        if not found:
-            result += char
-    return result
+    normalized_str = unicodedata.normalize('NFD', input_str)
+    return normalized_str.encode('ascii', 'ignore').decode('utf-8')
 
 def update_lcd(text_to_display):
     """Cập nhật văn bản trên màn hình LCD."""
@@ -137,30 +118,40 @@ def handle_character_input(channel):
     global input_string, last_touch_time, last_touched_pin, accent_mode
     current_time = time.time()
     
+    # Kiểm tra xem đây là phím gõ chữ hay phím dấu.
+    key_list = touch_pins.get(channel)
+    if not key_list:
+        return
+
+    # Logic gõ Telex
     if accent_mode:
-        accent_char = telex_key_map.get(channel)
-        if accent_char:
-            apply_telex_rule(accent_char)
+        if isinstance(key_list, list):
+            for key in key_list:
+                if key in telex_key_map.values():
+                    apply_telex_rule(key)
         accent_mode = False
         return
 
-    char_list = touch_pins[channel]
-    
-    # Kiểm tra xem đây có phải là một cú chạm liên tiếp trên cùng một phím trong vòng 2.0 giây không.
-    if (current_time - last_touch_time) < 2.0 and last_touched_pin == channel and input_string:
-        current_char = input_string[-1]
-        try:
-            current_index = char_list.index(current_char)
-            next_index = (current_index + 1) % len(char_list)
-            input_string = input_string[:-1] + char_list[next_index]
-        except ValueError:
+    # Logic gõ chữ và chuyển ký tự (Multi-tap)
+    char_list = key_list
+    if isinstance(char_list, list):
+        if (current_time - last_touch_time) < 1.0 and last_touched_pin == channel and input_string:
+            current_char = input_string[-1]
+            try:
+                current_index = char_list.index(current_char)
+                next_index = (current_index + 1) % len(char_list)
+                input_string = input_string[:-1] + char_list[next_index]
+            except ValueError:
+                input_string += char_list[0]
+        else:
             input_string += char_list[0]
-    else:
-        input_string += char_list[0]
-        
+    else: # Ký tự đơn
+        input_string += char_list
+
     last_touched_pin = channel
     last_touch_time = current_time
     update_lcd(input_string)
+
 
 def listen_and_transcribe():
     """Sử dụng microphone để chuyển giọng nói thành văn bản."""
