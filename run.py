@@ -73,15 +73,21 @@ def remove_accents(input_str):
     nfkd_form = unicodedata.normalize('NFKD', input_str)
     return ''.join([c for c in nfkd_form if not unicodedata.combining(c)])
 
+def filter_lcd_string(input_str):
+    """Lọc các ký tự để chỉ hiển thị các ký tự an toàn trên LCD."""
+    safe_chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 '
+    return ''.join(c for c in input_str if c in safe_chars)
+
 def update_lcd(text_to_display):
     """Cập nhật văn bản trên màn hình LCD."""
     text_no_accents = remove_accents(text_to_display)
+    filtered_text = filter_lcd_string(text_no_accents)
     lcd.clear()
-    if len(text_no_accents) > LCD_COLUMNS:
-        lcd.text(text_no_accents[:LCD_COLUMNS], 1)
-        lcd.text(text_no_accents[LCD_COLUMNS:], 2)
+    if len(filtered_text) > LCD_COLUMNS:
+        lcd.text(filtered_text[:LCD_COLUMNS], 1)
+        lcd.text(filtered_text[LCD_COLUMNS:], 2)
     else:
-        lcd.text(text_no_accents, 1)
+        lcd.text(filtered_text, 1)
 
 def apply_telex_rule(accent_char):
     """Áp dụng quy tắc Telex để thêm dấu."""
@@ -114,7 +120,8 @@ def handle_character_input(channel):
 
     char_list = touch_pins[channel]
     
-    if (current_time - last_touch_time) < 0.5 and last_touched_pin == channel and input_string:
+    # Kiểm tra xem đây có phải là một cú chạm liên tiếp trên cùng một phím trong vòng 1 giây không.
+    if (current_time - last_touch_time) < 1.0 and last_touched_pin == channel and input_string:
         current_char = input_string[-1]
         try:
             current_index = char_list.index(current_char)
@@ -133,17 +140,17 @@ def listen_and_transcribe():
     """Sử dụng microphone để chuyển giọng nói thành văn bản."""
     global input_string
     r = sr.Recognizer()
-    update_lcd("Đang nghe...")
+    update_lcd("Dang nghe...")
     with sr.Microphone() as source:
         r.adjust_for_ambient_noise(source)
         try:
             audio = r.listen(source, timeout=5)
-            update_lcd("Đang xử lý...")
+            update_lcd("Dang xu ly...")
             text = r.recognize_google(audio, language="vi-VN")
             input_string += " " + text
             update_lcd(input_string)
         except sr.WaitTimeoutError:
-            update_lcd("Hết thời gian.")
+            update_lcd("Het thoi gian.")
         except sr.UnknownValueError:
             update_lcd("Khong hieu ban noi gi.")
         except sr.RequestError as e:
@@ -202,8 +209,9 @@ def on_touch_event(channel):
 
 # ==================== Vòng lặp chính ====================
 # Đăng ký sự kiện cho tất cả các cảm biến với chế độ phát hiện cả hai cạnh
+# Tăng bouncetime lên 300ms để chống nảy phím
 for pin in touch_pins.keys():
-    GPIO.add_event_detect(pin, GPIO.BOTH, callback=on_touch_event, bouncetime=50)
+    GPIO.add_event_detect(pin, GPIO.BOTH, callback=on_touch_event, bouncetime=300)
 
 try:
     print("Găng tay đã sẵn sàng. Bắt đầu gõ!")
