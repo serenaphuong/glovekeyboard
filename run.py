@@ -68,48 +68,14 @@ def speak_text(text):
     except FileNotFoundError:
         print("Lỗi: espeak-ng không được cài đặt. Vui lòng cài đặt bằng lệnh: sudo apt-get install espeak-ng")
 
-def create_custom_chars():
-    """Tạo các ký tự tùy chỉnh cho tiếng Việt trên LCD."""
-    # Định nghĩa các ký tự đặc biệt và byte code của chúng
-    # Mỗi ký tự là một mảng 8 byte, mỗi byte đại diện cho một hàng pixel
-    char_a = [0x00, 0x00, 0x01, 0x02, 0x11, 0x11, 0x0E, 0x00]  # ă
-    char_a_hat = [0x04, 0x00, 0x0A, 0x11, 0x11, 0x11, 0x0E, 0x00] # â
-    char_d_bar = [0x00, 0x08, 0x09, 0x0A, 0x0C, 0x0A, 0x09, 0x08] # đ
-    char_e_hat = [0x04, 0x0A, 0x11, 0x1F, 0x11, 0x11, 0x11, 0x00] # ê
-    char_o_hat = [0x00, 0x00, 0x0E, 0x11, 0x11, 0x11, 0x0E, 0x00] # ô
-    char_u_hat = [0x00, 0x00, 0x11, 0x11, 0x11, 0x11, 0x0E, 0x00] # ư
-    
-    # Gửi các ký tự tùy chỉnh đến LCD CGRAM (0-5)
-    lcd.create_char(0, char_a)
-    lcd.create_char(1, char_a_hat)
-    lcd.create_char(2, char_d_bar)
-    lcd.create_char(3, char_e_hat)
-    lcd.create_char(4, char_o_hat)
-    lcd.create_char(5, char_u_hat)
-
 def remove_accents(input_str):
     """Chuyển đổi chuỗi tiếng Việt có dấu thành không dấu."""
     nfkd_form = unicodedata.normalize('NFKD', input_str)
     return ''.join([c for c in nfkd_form if not unicodedata.combining(c)])
 
-def filter_lcd_string(input_str):
-    """Lọc các ký tự để chỉ hiển thị các ký tự an toàn trên LCD."""
-    safe_chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 '
-    return ''.join(c for c in input_str if c in safe_chars)
-
 def update_lcd(text_to_display):
     """Cập nhật văn bản trên màn hình LCD."""
-    # Ánh xạ các ký tự tiếng Việt có dấu thành ký tự tùy chỉnh hoặc không dấu
-    vietnamese_map = {'ă': chr(0), 'â': chr(1), 'đ': chr(2), 'ê': chr(3), 'ô': chr(4), 'ư': chr(5)}
-    
-    display_text = ""
-    for char in text_to_display:
-        if char.lower() in vietnamese_map:
-            display_text += vietnamese_map[char.lower()]
-        else:
-            display_text += char
-    
-    display_text = filter_lcd_string(display_text)
+    display_text = remove_accents(text_to_display)
     
     lcd.clear()
     if len(display_text) > LCD_COLUMNS:
@@ -200,8 +166,8 @@ def on_touch_event(channel):
         
         if pin_function == 'function_key':
             press_duration = time.time() - function_press_start_time
-            if press_duration > 2.0:
-                # Nhấn giữ lâu (trên 2 giây) để nghe
+            if press_duration > 3.0:
+                # Nhấn giữ lâu (trên 3.0 giây) để nghe
                 listen_and_transcribe()
                 function_tap_count = 0
             else:
@@ -238,13 +204,12 @@ def on_touch_event(channel):
 
 # ==================== Vòng lặp chính ====================
 # Đăng ký sự kiện cho tất cả các cảm biến với chế độ phát hiện cả hai cạnh
-# Tăng bouncetime lên 300ms để chống nảy phím
+# Thay đổi bouncetime về 50ms để chống nảy phím hiệu quả
 for pin in touch_pins.keys():
-    GPIO.add_event_detect(pin, GPIO.BOTH, callback=on_touch_event, bouncetime=300)
+    GPIO.add_event_detect(pin, GPIO.BOTH, callback=on_touch_event, bouncetime=50)
 
 try:
     print("Găng tay đã sẵn sàng. Bắt đầu gõ!")
-    create_custom_chars() # Tạo ký tự tùy chỉnh trước khi bắt đầu
     update_lcd("San sang...")
     while True:
         time.sleep(0.1)
