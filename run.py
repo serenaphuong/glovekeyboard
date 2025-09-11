@@ -4,7 +4,7 @@ import subprocess
 import speech_recognition as sr
 from rpi_lcd import LCD
 
-# Khởi tạo LCD
+# ==================== Khởi tạo phần cứng ====================
 lcd = LCD()
 
 # Định nghĩa các chân GPIO cho 9 cảm biến
@@ -28,7 +28,7 @@ GPIO.setmode(GPIO.BCM)
 for pin in touch_pins.keys():
     GPIO.setup(pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
-# Ánh xạ các phím chữ cái với các phím gõ Telex
+# ==================== Logic gõ Telex ====================
 telex_key_map = {
     5: 's',   # Phím s (sắc)
     12: 'f',  # Phím f (huyền)
@@ -40,7 +40,6 @@ telex_key_map = {
     14: 'd',  # Phím d (cho đ)
 }
 
-# Bảng quy tắc Telex đầy đủ
 telex_rules = {
     'a': {'s': 'á', 'f': 'à', 'r': 'ả', 'x': 'ã', 'j': 'ạ', 'w': 'â', 'a': 'ă'},
     'e': {'s': 'é', 'f': 'è', 'r': 'ẻ', 'x': 'ẽ', 'j': 'ẹ', 'w': 'ê'},
@@ -50,7 +49,7 @@ telex_rules = {
     'd': {'d': 'đ'}
 }
 
-# Biến toàn cục để theo dõi trạng thái chương trình
+# ==================== Biến trạng thái toàn cục ====================
 input_string = ""
 last_touch_time = 0
 last_touched_pin = None
@@ -60,9 +59,13 @@ function_tap_count = 0
 function_last_tap_time = 0
 function_press_start_time = 0
 
+# ==================== Hàm tiện ích ====================
 def speak_text(text):
     """Phát âm văn bản ra loa."""
-    subprocess.call(['espeak-ng', '-v vi', text])
+    try:
+        subprocess.call(['espeak-ng', '-v vi', text])
+    except FileNotFoundError:
+        print("Lỗi: espeak-ng không được cài đặt. Vui lòng cài đặt bằng lệnh: sudo apt-get install espeak-ng")
 
 def update_lcd(text_to_display):
     """Cập nhật văn bản trên màn hình LCD."""
@@ -92,10 +95,9 @@ def apply_telex_rule(accent_char):
 
 def handle_character_input(channel):
     """Xử lý đầu vào từ các phím gõ chữ và Telex."""
-    global input_string, last_touch_time, last_touched_pin, accent_mode, function_tap_count
+    global input_string, last_touch_time, last_touched_pin, accent_mode
     current_time = time.time()
     
-    # Nếu đang ở chế độ gõ dấu Telex, xử lý phím gõ dấu
     if accent_mode:
         accent_char = telex_key_map.get(channel)
         if accent_char:
@@ -103,7 +105,6 @@ def handle_character_input(channel):
         accent_mode = False
         return
 
-    # Xử lý gõ chữ multi-tap
     char_list = touch_pins[channel]
     
     if (current_time - last_touch_time) < 0.5 and last_touched_pin == channel and input_string:
@@ -119,7 +120,6 @@ def handle_character_input(channel):
         
     last_touched_pin = channel
     last_touch_time = current_time
-    function_tap_count = 0 # Reset function tap count
     update_lcd(input_string)
 
 def listen_and_transcribe():
@@ -142,16 +142,16 @@ def listen_and_transcribe():
         except sr.RequestError as e:
             update_lcd(f"Lỗi: {e}")
 
-# Main event handler
-def on_touch_down(channel):
-    global function_press_start_time
+# ==================== Hàm xử lý chính ====================
+def on_touch_event(channel):
+    global input_string, accent_mode, last_touched_pin, function_tap_count, function_last_tap_time, function_press_start_time
+
+    # Xử lý khi chạm vào cảm biến (Falling Edge)
     if GPIO.input(channel) == GPIO.LOW:
         if touch_pins.get(channel) == 'function_key':
             function_press_start_time = time.time()
-
-def on_touch_up(channel):
-    global input_string, accent_mode, last_touched_pin, function_tap_count, function_last_tap_time
     
+    # Xử lý khi nhả tay khỏi cảm biến (Rising Edge)
     if GPIO.input(channel) == GPIO.HIGH:
         pin_function = touch_pins.get(channel)
         
@@ -165,12 +165,11 @@ def on_touch_up(channel):
                 # Nhấn nhanh để kích hoạt các chức năng khác
                 current_time = time.time()
                 if (current_time - function_last_tap_time) > 0.5:
-                    function_tap_count = 1
-                else:
-                    function_tap_count += 1
+                    function_tap_count = 0
                 
+                function_tap_count += 1
                 function_last_tap_time = current_time
-
+                
                 if function_tap_count == 1:
                     # Nhấn 1 lần: Phím cách
                     input_string += " "
@@ -184,15 +183,16 @@ def on_touch_up(channel):
                     # Nhấn 3 lần: Gõ dấu
                     accent_mode = True
                     update_lcd("Chọn dấu...")
-                    function_tap_count = 0 # Reset sau khi chọn dấu
-
+                    function_tap_count = 0 
+                elif function_tap_count > 3:
+                    function_tap_count = 0 
         else:
             handle_character_input(channel)
 
-# Đăng ký sự kiện cho tất cả các cảm biến
+# ==================== Vòng lặp chính ====================
+# Đăng ký sự kiện cho tất cả các cảm biến với chế độ phát hiện cả hai cạnh
 for pin in touch_pins.keys():
-    GPIO.add_event_detect(pin, GPIO.FALLING, callback=on_touch_down, bouncetime=10)
-    GPIO.add_event_detect(pin, GPIO.RISING, callback=on_touch_up, bouncetime=10)
+    GPIO.add_event_detect(pin, GPIO.BOTH, callback=on_touch_event, bouncetime=50)
 
 try:
     print("Găng tay đã sẵn sàng. Bắt đầu gõ!")
