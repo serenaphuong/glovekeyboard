@@ -9,7 +9,15 @@ from gtts import gTTS
 import simpleaudio as sa
 
 # ==================== Hardware Initialization ====================
-lcd = LCD()
+lcd = None
+lcd_working = False
+
+try:
+    lcd = LCD()
+    lcd_working = True
+except Exception as e:
+    print(f"Lỗi LCD: Không thể kết nối đến màn hình. Vui lòng kiểm tra cap kết nối. Chi tiết lỗi: {e}")
+    print("Chương trình sẽ hoạt động ở chế độ dự phòng, hiển thị văn bản trên Terminal.")
 
 # Define GPIO pins for the 9 sensors
 touch_pins = {
@@ -106,6 +114,10 @@ def remove_accents(input_str):
 
 def update_lcd(text_to_display):
     """Updates the text on the LCD screen, handling potential encoding errors."""
+    if not lcd_working:
+        print(f"Terminal: {text_to_display}")
+        return
+
     display_text = remove_accents(text_to_display)
     
     lcd.clear()
@@ -120,6 +132,9 @@ def update_lcd(text_to_display):
         lcd.clear()
         lcd.text("Loi hien thi", 1)
         lcd.text("ky tu", 2)
+    except Exception as e:
+        print(f"Loi LCD: Khong the ket noi den man hinh. Vui long kiem tra cap ket noi. Chi tiet loi: {e}")
+        # Không có gì để hiển thị trên LCD nếu không kết nối được
 
 def listen_and_transcribe():
     """Uses the microphone to transcribe speech to text."""
@@ -257,4 +272,5 @@ except KeyboardInterrupt:
 
 finally:
     GPIO.cleanup()
-    lcd.clear()
+    if lcd_working:
+        lcd.clear()
