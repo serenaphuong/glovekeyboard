@@ -1,6 +1,7 @@
 import RPi.GPIO as GPIO
 import time
 import subprocess
+import speech_recognition as sr
 from rpi_lcd import LCD
 
 # ==================== Hardware Initialization ====================
@@ -55,6 +56,42 @@ def speak_text(text):
         print(error_message)
         update_lcd(error_message)
 
+def listen_and_transcribe():
+    """Listens for audio input and transcribes it to text using an offline library."""
+    global input_string
+    r = sr.Recognizer()
+    mic = sr.Microphone()
+
+    update_lcd("Listening...")
+    print("Listening...")
+    
+    try:
+        with mic as source:
+            r.adjust_for_ambient_noise(source)
+            audio = r.listen(source, timeout=5)
+
+        update_lcd("Transcribing...")
+        print("Transcribing...")
+        
+        # Use PocketSphinx for offline transcription
+        text = r.recognize_sphinx(audio, language='en-US')
+        input_string += text
+        update_lcd(input_string)
+        print(f"You said: {text}")
+
+    except sr.UnknownValueError:
+        error_message = "Could not understand audio"
+        print(error_message)
+        update_lcd(error_message)
+    except sr.RequestError as e:
+        error_message = f"Could not request results; check your PocketSphinx installation: {e}"
+        print(error_message)
+        update_lcd(error_message)
+    except Exception as e:
+        error_message = f"An unexpected error occurred: {e}"
+        print(error_message)
+        update_lcd(error_message)
+
 def update_lcd(text_to_display):
     """Updates the text on the LCD screen, handling potential encoding errors."""
     if lcd is None:
@@ -105,7 +142,7 @@ def handle_function_input(channel):
     """Handles input from the function key (multi-tap logic for actions)."""
     global input_string, function_tap_count, function_last_tap_time
     current_time = time.time()
-    FUNCTION_TAP_WINDOW = 3.0
+    FUNCTION_TAP_WINDOW = 4.0
     
     # Check if this tap is part of the same sequence
     if (current_time - function_last_tap_time) > FUNCTION_TAP_WINDOW:
@@ -117,23 +154,26 @@ def handle_function_input(channel):
 
     # Execute action based on tap count
     if function_tap_count == 1:
-        # Tap once: Speak the text
-        speak_text(input_string)
-    elif function_tap_count == 2:
-        # Tap twice: Add a space
+        # Tap once: Add a space
         input_string += " "
-    elif function_tap_count == 3:
-        # Tap three times: Backspace
+    elif function_tap_count == 2:
+        # Tap twice: Backspace
         if input_string:
             input_string = input_string[:-1]
+    elif function_tap_count == 3:
+        # Tap three times: Speak the text
+        speak_text(input_string)
     elif function_tap_count == 4:
-        # Tap four times: Clear all
+        # Tap four times: Speech-to-Text
+        listen_and_transcribe()
+    elif function_tap_count == 5:
+        # Tap five times: Clear all
         input_string = ""
     
     update_lcd(input_string)
     
-    # For taps beyond 4, reset the counter
-    if function_tap_count > 4:
+    # For taps beyond 5, reset the counter
+    if function_tap_count > 5:
         function_tap_count = 0
 
 
