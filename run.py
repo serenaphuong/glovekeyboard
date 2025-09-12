@@ -47,17 +47,17 @@ function_last_tap_time = 0
 
 # ==================== Utility Functions ====================
 def speak_text(text):
-    """Speaks the text out loud using gTTS and simpleaudio."""
+    """Speaks the text out loud using espeak-ng."""
     try:
-        tts = gTTS(text=text, lang='en', slow=False)
-        tts.save("temp.mp3")
-        wave_obj = sa.WaveObject.from_wave_file("temp.mp3")
-        play_obj = wave_obj.play()
-        play_obj.wait_done()
-        os.remove("temp.mp3")
-    except Exception as e:
-        print(f"Error speaking text: {e}")
-        update_lcd("Pronunciation error")
+        subprocess.run(['espeak-ng', '-v', 'en', text], check=True)
+    except FileNotFoundError:
+        error_message = "espeak-ng not found. Please install it."
+        print(error_message)
+        update_lcd(error_message)
+    except subprocess.CalledProcessError as e:
+        error_message = f"Error speaking text: {e}"
+        print(error_message)
+        update_lcd(error_message)
 
 def update_lcd(text_to_display):
     """Updates the text on the LCD screen, handling potential encoding errors."""
@@ -83,7 +83,7 @@ def handle_character_input(channel):
     """Handles input from the character keys (multi-tap logic)."""
     global input_string, last_touch_time, last_touched_pin
     current_time = time.time()
-    TAP_WINDOW = 0.5 # Window for multi-tap, in seconds
+    TAP_WINDOW = 2.0 # Window for multi-tap, in seconds
     
     char_list = touch_pins.get(channel)
     if not char_list:
