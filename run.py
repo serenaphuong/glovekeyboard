@@ -109,7 +109,7 @@ def handle_function_input(channel):
     """Handles input from the function key (multi-tap logic for actions)."""
     global input_string, function_tap_count, function_last_tap_time
     current_time = time.time()
-    FUNCTION_TAP_WINDOW = 2.0 
+    FUNCTION_TAP_WINDOW = 3.0
     
     # Check if this tap is part of the same sequence
     if (current_time - function_last_tap_time) > FUNCTION_TAP_WINDOW:
@@ -121,19 +121,18 @@ def handle_function_input(channel):
 
     # Execute action based on tap count
     if function_tap_count == 1:
-        # Tap once: Add a space
-        input_string += " "
+        # Tap once: Speak the text
+        speak_text(input_string)
     elif function_tap_count == 2:
-        # Tap twice: Backspace
+        # Tap twice: Add a space
+        input_string += " "
+    elif function_tap_count == 3:
+        # Tap three times: Backspace
         if input_string:
             input_string = input_string[:-1]
-    elif function_tap_count == 3:
-        # Tap three times: Clear all
-        input_string = ""
     elif function_tap_count == 4:
-        # Tap four times: Speak the text
-        speak_text(input_string)
-        function_tap_count = 0
+        # Tap four times: Clear all
+        input_string = ""
     
     update_lcd(input_string)
     
