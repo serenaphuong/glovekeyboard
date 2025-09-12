@@ -100,7 +100,8 @@ def update_lcd(text_to_display):
 
     try:
         lcd.clear()
-        display_text = text_to_display
+        # Filter characters to ensure they can be displayed on the LCD
+        display_text = "".join(c if 32 <= ord(c) <= 126 else ' ' for c in text_to_display)
         if len(display_text) > LCD_COLUMNS:
             lcd.text(display_text[:LCD_COLUMNS], 1)
             lcd.text(display_text[LCD_COLUMNS:], 2)
