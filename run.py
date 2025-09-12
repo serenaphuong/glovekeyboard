@@ -105,15 +105,21 @@ def remove_accents(input_str):
     return result
 
 def update_lcd(text_to_display):
-    """Updates the text on the LCD screen."""
+    """Updates the text on the LCD screen, handling potential encoding errors."""
     display_text = remove_accents(text_to_display)
     
     lcd.clear()
-    if len(display_text) > LCD_COLUMNS:
-        lcd.text(display_text[:LCD_COLUMNS], 1)
-        lcd.text(display_text[LCD_COLUMNS:], 2)
-    else:
-        lcd.text(display_text, 1)
+    try:
+        if len(display_text) > LCD_COLUMNS:
+            lcd.text(display_text[:LCD_COLUMNS], 1)
+            lcd.text(display_text[LCD_COLUMNS:], 2)
+        else:
+            lcd.text(display_text, 1)
+    except UnicodeEncodeError as e:
+        print(f"UnicodeEncodeError: Cannot display '{text_to_display}'. Error: {e}")
+        lcd.clear()
+        lcd.text("Loi hien thi", 1)
+        lcd.text("ky tu", 2)
 
 def listen_and_transcribe():
     """Uses the microphone to transcribe speech to text."""
