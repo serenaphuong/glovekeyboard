@@ -1,11 +1,7 @@
 import RPi.GPIO as GPIO
 import time
 import subprocess
-import speech_recognition as sr
 from rpi_lcd import LCD
-import os
-from gtts import gTTS
-import simpleaudio as sa
 
 # ==================== Hardware Initialization ====================
 lcd = None
