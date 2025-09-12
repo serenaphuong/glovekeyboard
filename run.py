@@ -272,5 +272,4 @@ except KeyboardInterrupt:
 
 finally:
     GPIO.cleanup()
-    if lcd_working:
         lcd.clear()
