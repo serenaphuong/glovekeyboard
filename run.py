@@ -22,11 +22,11 @@ touch_pins = {
     13: ['j', 'k', 'l'],
     26: ['m', 'n', 'o'],
     5: ['p', 'q', 'r'],
-    14: ['s', 't', 'u'],
+    19: ['s', 't', 'u'],
     21: ['v', 'w', 'x'],
     
     # 1 multi-function key
-    19: 'function_key',
+    14: 'function_key',
 }
 
 # Configure GPIO pins
