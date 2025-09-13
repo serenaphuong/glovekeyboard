@@ -23,7 +23,7 @@ touch_pins = {
     26: ['m', 'n', 'o'],
     5: ['p', 'q', 'r'],
     19: ['s', 't', 'u'],
-    21: ['v', 'w', 'x'],
+    21: ['y', 'w', 'x'],
     
     # 1 multi-function key
     14: 'function_key',
@@ -152,7 +152,7 @@ def handle_function_input(channel):
         function_tap_count += 1
     
     function_last_tap_time = current_time
-
+if function_tap_count > 0 and (time.time() - function_last_tap_time) > 2:
     # Execute action based on tap count
     if function_tap_count == 1:
         # Tap once: Add a space
